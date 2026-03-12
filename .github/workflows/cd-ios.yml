@@ -3,6 +3,10 @@ name: Deploy to App Store
 on:
   workflow_dispatch:
 
+concurrency:
+  group: deploy-ios
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -36,6 +40,13 @@ jobs:
           git fetch --tags
           if git rev-parse "v${{ steps.version.outputs.version }}-ios" >/dev/null 2>&1; then
             echo "::error::Tag v${{ steps.version.outputs.version }}-ios already exists. Bump the version first: npm run version:patch"
+            exit 1
+          fi
+
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "::error::Missing required secret: EXPO_TOKEN — See docs/EXPO_SETUP.md"
             exit 1
           fi
 
