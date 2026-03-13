@@ -45,8 +45,10 @@ jobs:
           fi
 
       - name: Validate secrets
+        env:
+          HAS_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
         run: |
-          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+          if [ "$HAS_EXPO_TOKEN" != "true" ]; then
             echo "::error::Missing required secret: EXPO_TOKEN — See docs/EXPO_SETUP.md"
             exit 1
           fi
