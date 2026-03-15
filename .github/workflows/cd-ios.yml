@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-tags: true
 
       - uses: actions/setup-node@v6
         with:
@@ -38,7 +40,6 @@ jobs:
 
       - name: Version guard
         run: |
-          git fetch --tags
           if git rev-parse "v${{ steps.version.outputs.version }}-ios" >/dev/null 2>&1; then
             echo "::error::Tag v${{ steps.version.outputs.version }}-ios already exists. Bump the version first: npm run version:patch"
             exit 1
