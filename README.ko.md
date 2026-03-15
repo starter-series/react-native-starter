@@ -87,6 +87,14 @@ npx expo start
 | 린트 | ESLint로 앱 및 컴포넌트 코드 검사 |
 | 테스트 | Jest + React Native Testing Library |
 
+### 보안 & 유지보수
+
+| 워크플로우 | 역할 |
+|-----------|------|
+| CodeQL (`codeql.yml`) | 보안 취약점 정적 분석 (push/PR + 주간) |
+| Maintenance (`maintenance.yml`) | 주간 CI 헬스 체크 — 실패 시 이슈 자동 생성 |
+| Stale (`stale.yml`) | 비활성 이슈/PR 30일 후 라벨링, 7일 후 자동 종료 |
+
 ### CD Android (Actions 탭에서 수동 실행)
 
 | 단계 | 역할 |
