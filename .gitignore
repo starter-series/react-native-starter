@@ -17,3 +17,4 @@ web-build/
 
 # Play Store service account key (sensitive)
 play-store-key.json
+.claude/
