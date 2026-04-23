@@ -119,8 +119,9 @@ npx expo start
 
 1. `EXPO_TOKEN` 시크릿 설정 (아래 참조)
 2. 스토어 계정 설정 ([docs/](docs/) 참조)
-3. 버전 업: `npm run version:patch`
-4. **Actions** 탭 -> **Deploy to Play Store** 또는 **Deploy to App Store** -> **Run workflow**
+3. `eas submit:configure`를 한 번 실행해 `eas.json`의 `submit` 블록에 Apple/Google 자격 증명 채우기
+4. 버전 업: `npm run version:patch`
+5. **Actions** 탭 -> **Deploy to Play Store** 또는 **Deploy to App Store** -> **Run workflow**
 
 ### GitHub Secrets
 

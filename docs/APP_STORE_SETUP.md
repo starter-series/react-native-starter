@@ -24,28 +24,21 @@
    - **SKU:** A unique identifier (e.g., `com.example.myapp`)
 4. Click **Create**
 
-## 3. Update eas.json
+## 3. Configure eas.json
 
-Update the `submit.production.ios` section in `eas.json`:
+The template ships without a `submit` block so you don't have to hand-edit placeholders. Run:
 
-```json
-{
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "your-apple-id@email.com",
-        "ascAppId": "1234567890",
-        "appleTeamId": "ABCDEF1234"
-      }
-    }
-  }
-}
+```bash
+eas submit:configure
 ```
 
-**Where to find these values:**
+EAS will prompt you for the values below and write them into `eas.json` under `submit.production.ios`:
+
 - `appleId`: Your Apple ID email
 - `ascAppId`: App Store Connect → Your App → General → App Information → Apple ID
 - `appleTeamId`: [developer.apple.com/account](https://developer.apple.com/account) → Membership Details → Team ID
+
+See [Expo docs: iOS submission](https://docs.expo.dev/submit/ios/) for details.
 
 ## 4. Set Up Signing (EAS Manages This)
 
