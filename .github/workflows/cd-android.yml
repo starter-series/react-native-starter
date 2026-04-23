@@ -67,7 +67,7 @@ jobs:
         run: eas submit --platform android --profile production --non-interactive
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.version.outputs.version }}-android
           name: v${{ steps.version.outputs.version }} (Android)
