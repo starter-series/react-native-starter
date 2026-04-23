@@ -9,7 +9,7 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "lint": "eslint app/",
+    "lint": "eslint app/ lib/",
     "test": "jest --verbose --passWithNoTests",
     "version:patch": "node scripts/bump-version.js patch",
     "version:minor": "node scripts/bump-version.js minor",
@@ -17,8 +17,12 @@
   },
   "dependencies": {
     "expo": "~52.0.0",
+    "expo-auth-session": "~6.0.3",
+    "expo-crypto": "~14.0.2",
     "expo-router": "~4.0.0",
+    "expo-secure-store": "~14.0.1",
     "expo-status-bar": "~2.0.0",
+    "expo-web-browser": "~14.0.2",
     "react": "18.3.1",
     "react-native": "0.76.9"
   },
