@@ -57,7 +57,8 @@ npx expo start
 ├── docs/
 │   ├── EXPO_SETUP.md           # Expo account + EAS setup
 │   ├── APP_STORE_SETUP.md      # Apple Developer + App Store Connect
-│   └── PLAY_STORE_SETUP.md     # Google Play Console setup
+│   ├── PLAY_STORE_SETUP.md     # Google Play Console setup
+│   └── AUTH_EXAMPLE.md         # Optional: Google OAuth (Auth Session + SecureStore)
 ├── scripts/
 │   └── bump-version.js         # Bumps version in app.json + package.json
 ├── eas-hooks/
@@ -186,6 +187,10 @@ npm test
 | Time to first deploy | Minutes (after store account setup) | Hours of configuration |
 
 **The key insight:** EAS handles native builds in the cloud -- no local Xcode or Android Studio needed for CI/CD. This template wires that up to GitHub Actions so you get one-click deploys from day one.
+
+### What about auth?
+
+Auth is intentionally **not** wired in — most apps only need one provider and adding it here would force runtime deps on users who don't. See **[docs/AUTH_EXAMPLE.md](docs/AUTH_EXAMPLE.md)** for a copy-paste Google OAuth pattern using `expo-auth-session` + `expo-secure-store`.
 
 ### What about TypeScript?
 
