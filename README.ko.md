@@ -42,11 +42,21 @@ npx expo start
 
 ```
 ├── app/                        # Expo Router 앱 디렉토리
-│   ├── _layout.js              # 루트 레이아웃 (Stack 네비게이터)
-│   ├── index.js                # 홈 화면
-│   └── about.js                # 예시 두 번째 화면
+│   ├── _layout.js              # 루트 레이아웃 — 전체를 <AuthProvider>로 감쌈
+│   ├── (app)/                  # 인증 필요 그룹 (로그아웃 시 /login 리다이렉트)
+│   │   ├── _layout.js          # 가드 레이아웃
+│   │   ├── index.js            # 홈 화면
+│   │   ├── about.js            # 예시 두 번째 화면
+│   │   └── profile.js          # 로그인 유저 정보 + 로그아웃
+│   └── (auth)/
+│       ├── _layout.js          # 이미 로그인 상태면 / 로 리다이렉트
+│       └── login.js            # "Continue with Google" 화면
+├── lib/
+│   ├── auth-context.js         # AuthProvider + useAuth + handleAuthResult
+│   └── env.js                  # EXPO_PUBLIC_GOOGLE_* 클라이언트 ID 로드
 ├── assets/                     # 앱 아이콘, 스플래시, 어댑티브 아이콘
-├── tests/                      # 테스트 추가 위치
+├── tests/                      # Jest 테스트 (auth-context, screens, 구조)
+├── .env.example                # Google OAuth 클라이언트 ID 예시
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yml              # 린트, 테스트, 감사
@@ -57,8 +67,7 @@ npx expo start
 ├── docs/
 │   ├── EXPO_SETUP.md           # Expo 계정 + EAS 설정
 │   ├── APP_STORE_SETUP.md      # Apple Developer + App Store Connect
-│   ├── PLAY_STORE_SETUP.md     # Google Play Console 설정
-│   └── AUTH_EXAMPLE.md         # 선택: Google OAuth (Auth Session + SecureStore)
+│   └── PLAY_STORE_SETUP.md     # Google Play Console 설정
 ├── scripts/
 │   └── bump-version.js         # app.json + package.json 버전 업
 ├── eas-hooks/
@@ -76,7 +85,7 @@ npx expo start
 - **CD 파이프라인** -- EAS Build를 통한 원클릭 App Store / Play Store 배포
 - **클라우드 빌드** -- EAS가 클라우드에서 네이티브 바이너리 컴파일 (로컬 Xcode/Android Studio 불필요)
 - **버전 관리** -- `npm run version:patch/minor/major`로 `app.json` 버전 업
-- **스타터 코드** -- 홈 화면 + About 화면 + 네비게이션
+- **스타터 코드** -- 홈 + About + Profile 화면 + Google OAuth 로그인 연결 완료
 - **스토어 설정 가이드** -- Apple Developer, Google Play Console, EAS 단계별 문서
 - **템플릿 셋업** -- 첫 사용 시 설정 체크리스트 이슈 자동 생성
 
@@ -188,9 +197,27 @@ npm test
 
 **핵심:** EAS가 클라우드에서 네이티브 빌드를 처리합니다 -- CI/CD에 로컬 Xcode나 Android Studio가 필요 없습니다. 이 템플릿은 그것을 GitHub Actions에 연결해서 첫날부터 원클릭 배포를 제공합니다.
 
-### 인증(Auth)은?
+### 인증(Google OAuth, 내장)
 
-인증은 **의도적으로** 넣지 않았습니다 — 대부분의 앱이 provider 하나면 충분한데, 여기 박아두면 필요 없는 사람에게도 런타임 의존성을 강제하게 됩니다. `expo-auth-session` + `expo-secure-store` 기반 Google OAuth 복붙 패턴은 **[docs/AUTH_EXAMPLE.md](docs/AUTH_EXAMPLE.md)** 참고.
+Google 로그인이 `expo-auth-session` + `expo-secure-store` 조합으로 **이미 연결**되어 있습니다. `app/(app)/` 아래 라우트는 인증 필수이며, 로그아웃 상태면 `/login`으로 자동 리다이렉트됩니다. 토큰은 iOS Keychain / Android Keystore에 저장되며, `AsyncStorage`는 사용하지 않습니다.
+
+**설정:**
+
+1. [Google Cloud Console → 사용자 인증 정보](https://console.cloud.google.com/apis/credentials) → **OAuth 클라이언트 ID 만들기**. 세 개 생성:
+   - **웹 애플리케이션** (필수 — 개발 시 Expo AuthSession 프록시가 사용)
+   - **iOS** — 번들 ID = `app.json`의 `ios.bundleIdentifier`
+   - **Android** — 패키지 = `android.package`, 키스토어의 SHA-1 (`eas credentials`로 확인 가능)
+2. `cp .env.example .env` 후 클라이언트 ID 붙여넣기:
+   ```
+   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
+   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=...
+   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=...
+   ```
+3. `npx expo start` 실행 후 **Continue with Google** 탭.
+
+클라이언트 ID가 없으면 로그인 버튼이 크래시 없이 명확한 에러 메시지를 표시합니다. 다른 provider로 바꾸려면 `lib/auth-context.js`에서 `expo-auth-session/providers/google`만 교체하면 됩니다.
+
+문서: [Expo Google 인증 가이드](https://docs.expo.dev/guides/google-authentication/).
 
 ### TypeScript는?
 

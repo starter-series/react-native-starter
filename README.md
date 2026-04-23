@@ -42,11 +42,21 @@ npx expo start
 
 ```
 ├── app/                        # Expo Router app directory
-│   ├── _layout.js              # Root layout (Stack navigator)
-│   ├── index.js                # Home screen
-│   └── about.js                # Example second screen
+│   ├── _layout.js              # Root layout — wraps everything in <AuthProvider>
+│   ├── (app)/                  # Auth-gated group (redirects to /login if signed out)
+│   │   ├── _layout.js          # Guard layout
+│   │   ├── index.js            # Home screen
+│   │   ├── about.js            # Example second screen
+│   │   └── profile.js          # Signed-in user info + sign-out
+│   └── (auth)/
+│       ├── _layout.js          # Bounces to / if already signed in
+│       └── login.js            # "Continue with Google" screen
+├── lib/
+│   ├── auth-context.js         # AuthProvider + useAuth + handleAuthResult
+│   └── env.js                  # Reads EXPO_PUBLIC_GOOGLE_* client IDs
 ├── assets/                     # App icon, splash, adaptive icon
-├── tests/                      # Add your tests here
+├── tests/                      # Jest tests (auth-context, screens, structure)
+├── .env.example                # Google OAuth client ID placeholders
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yml              # Lint, test, audit
@@ -57,8 +67,7 @@ npx expo start
 ├── docs/
 │   ├── EXPO_SETUP.md           # Expo account + EAS setup
 │   ├── APP_STORE_SETUP.md      # Apple Developer + App Store Connect
-│   ├── PLAY_STORE_SETUP.md     # Google Play Console setup
-│   └── AUTH_EXAMPLE.md         # Optional: Google OAuth (Auth Session + SecureStore)
+│   └── PLAY_STORE_SETUP.md     # Google Play Console setup
 ├── scripts/
 │   └── bump-version.js         # Bumps version in app.json + package.json
 ├── eas-hooks/
@@ -76,7 +85,7 @@ npx expo start
 - **CD Pipeline** -- one-click deploy to App Store and Play Store via EAS Build
 - **Cloud builds** -- EAS compiles native binaries in the cloud (no local Xcode/Android Studio needed)
 - **Version management** -- `npm run version:patch/minor/major` to bump `app.json`
-- **Starter code** -- Home screen + About screen with navigation
+- **Starter code** -- Home + About + Profile screens, Google OAuth login wired in
 - **Store setup guides** -- step-by-step docs for Apple Developer, Google Play Console, and EAS
 - **Template setup** -- auto-creates setup checklist issue on first use
 
@@ -188,9 +197,27 @@ npm test
 
 **The key insight:** EAS handles native builds in the cloud -- no local Xcode or Android Studio needed for CI/CD. This template wires that up to GitHub Actions so you get one-click deploys from day one.
 
-### What about auth?
+### Auth (Google OAuth, wired up)
 
-Auth is intentionally **not** wired in — most apps only need one provider and adding it here would force runtime deps on users who don't. See **[docs/AUTH_EXAMPLE.md](docs/AUTH_EXAMPLE.md)** for a copy-paste Google OAuth pattern using `expo-auth-session` + `expo-secure-store`.
+Google sign-in is **built in** with `expo-auth-session` + `expo-secure-store`. Routes under `app/(app)/` are gated — signed-out users get bounced to `/login`. Tokens live in the iOS Keychain / Android Keystore, never `AsyncStorage`.
+
+**Setup:**
+
+1. [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) → **Create OAuth client ID**. Create three:
+   - **Web application** (required — used by the Expo AuthSession proxy in dev)
+   - **iOS** — bundle ID = `ios.bundleIdentifier` from `app.json`
+   - **Android** — package = `android.package`, SHA-1 from your keystore (`eas credentials` will show it)
+2. `cp .env.example .env` and paste the client IDs:
+   ```
+   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
+   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=...
+   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=...
+   ```
+3. `npx expo start` and tap **Continue with Google**.
+
+Without client IDs, the login button surfaces a clear error message — it won't crash. Swap providers by replacing `expo-auth-session/providers/google` inside `lib/auth-context.js`.
+
+Docs: [Expo Google authentication guide](https://docs.expo.dev/guides/google-authentication/).
 
 ### What about TypeScript?
 
