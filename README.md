@@ -119,8 +119,9 @@ npx expo start
 
 1. Set up `EXPO_TOKEN` secret (see below)
 2. Configure store accounts (see [docs/](docs/))
-3. Bump version: `npm run version:patch`
-4. Go to **Actions** tab -> **Deploy to Play Store** or **Deploy to App Store** -> **Run workflow**
+3. Run `eas submit:configure` once to populate the `submit` block in `eas.json` with your Apple/Google credentials
+4. Bump version: `npm run version:patch`
+5. Go to **Actions** tab -> **Deploy to Play Store** or **Deploy to App Store** -> **Run workflow**
 
 ### GitHub Secrets
 

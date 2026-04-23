@@ -14,18 +14,5 @@
       "distribution": "store",
       "autoIncrement": true
     }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./play-store-key.json",
-        "track": "internal"
-      },
-      "ios": {
-        "appleId": "your@email.com",
-        "ascAppId": "your-app-id",
-        "appleTeamId": "YOUR_TEAM_ID"
-      }
-    }
   }
 }

@@ -61,24 +61,20 @@ This key allows EAS to upload builds to the Play Store automatically.
    - Manage testing tracks and edit tester lists
 6. Click **Invite user** → **Send invite**
 
-## 4. Update eas.json
+## 4. Configure eas.json
 
-Verify the `submit.production.android` section in `eas.json`:
+The template ships without a `submit` block so you don't have to hand-edit placeholders. Run:
 
-```json
-{
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./play-store-key.json",
-        "track": "internal"
-      }
-    }
-  }
-}
+```bash
+eas submit:configure
 ```
 
-The `track` can be: `internal`, `alpha`, `beta`, or `production`.
+EAS will prompt you and write the values into `eas.json` under `submit.production.android`:
+
+- `serviceAccountKeyPath`: path to the JSON you saved (e.g. `./play-store-key.json`)
+- `track`: `internal`, `alpha`, `beta`, or `production`
+
+See [Expo docs: Android submission](https://docs.expo.dev/submit/android/) for details.
 
 ## 5. First Submission
 
