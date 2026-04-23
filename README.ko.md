@@ -60,6 +60,8 @@ npx expo start
 │   └── PLAY_STORE_SETUP.md     # Google Play Console 설정
 ├── scripts/
 │   └── bump-version.js         # app.json + package.json 버전 업
+├── eas-hooks/
+│   └── eas-build-pre-install.sh  # EAS Build 훅 예시
 ├── eslint.config.js            # ESLint v9 flat config
 ├── app.json                    # Expo 설정
 ├── eas.json                    # EAS Build 프로필
@@ -134,6 +136,22 @@ npx expo start
 스토어 자격 증명은 `eas.json`과 `eas credentials`로 설정합니다 (GitHub Secrets가 아님):
 - **[docs/APP_STORE_SETUP.md](docs/APP_STORE_SETUP.md)** - iOS
 - **[docs/PLAY_STORE_SETUP.md](docs/PLAY_STORE_SETUP.md)** - Android
+
+## EAS Build 훅 (Hooks)
+
+EAS Build 생명주기 중간에 커스텀 스크립트를 실행합니다. `eas-hooks/<이름>.sh` 위치의 스크립트는 EAS CLI가 **자동 감지**합니다 — `eas.json` 설정 불필요. 시작할 수 있게 `eas-build-pre-install.sh` 예시가 포함되어 있습니다.
+
+| 훅 | 실행 시점 | 용도 |
+|----|----------|------|
+| `eas-build-pre-install.sh` | `npm install` 전 | 환경 변수 주입, 필수 시크릿 검증, `.env` 파일 생성 |
+| `eas-build-post-install.sh` | `npm install` 후, prebuild 전 | `patch-package`, 네이티브 모듈 설정, Ruby/CocoaPods 조정 |
+| `eas-build-on-success.sh` | 빌드 성공 후 | 알림, 추가 아티팩트 업로드 |
+| `eas-build-on-error.sh` | 빌드 실패 시 | 에러 리포팅, 디버깅 출력 |
+| `eas-build-on-cancel.sh` | 빌드 취소 시 | 정리 작업 |
+
+스크립트는 **실행 가능**해야 하며 (`chmod +x`), 실행 비트가 설정된 상태로 커밋해야 합니다. 훅에 시크릿을 노출하려면 `eas secret:create`를 사용하세요.
+
+문서: [Run custom scripts with npm hooks](https://docs.expo.dev/build-reference/npm-hooks/)
 
 ## 개발
 

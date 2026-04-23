@@ -60,6 +60,8 @@ npx expo start
 │   └── PLAY_STORE_SETUP.md     # Google Play Console setup
 ├── scripts/
 │   └── bump-version.js         # Bumps version in app.json + package.json
+├── eas-hooks/
+│   └── eas-build-pre-install.sh  # Example EAS Build hook
 ├── eslint.config.js            # ESLint v9 flat config
 ├── app.json                    # Expo config
 ├── eas.json                    # EAS Build profiles
@@ -134,6 +136,22 @@ See **[docs/EXPO_SETUP.md](docs/EXPO_SETUP.md)** for how to generate the token.
 Store credentials are configured through `eas.json` and `eas credentials` -- not GitHub Secrets. See:
 - **[docs/APP_STORE_SETUP.md](docs/APP_STORE_SETUP.md)** for iOS
 - **[docs/PLAY_STORE_SETUP.md](docs/PLAY_STORE_SETUP.md)** for Android
+
+## EAS Build Hooks
+
+Run custom scripts at different stages of the EAS Build lifecycle. Scripts at `eas-hooks/<name>.sh` are **auto-discovered** by EAS CLI — no `eas.json` config needed. An example `eas-build-pre-install.sh` is included to get you started.
+
+| Hook | When it runs | Use for |
+|------|-------------|---------|
+| `eas-build-pre-install.sh` | Before `npm install` | Inject env vars, validate required secrets, write `.env` files |
+| `eas-build-post-install.sh` | After `npm install`, before prebuild | `patch-package`, native module config, Ruby/CocoaPods tweaks |
+| `eas-build-on-success.sh` | After successful build | Notifications, uploading extra artifacts |
+| `eas-build-on-error.sh` | On build failure | Error reporting, debugging output |
+| `eas-build-on-cancel.sh` | On cancellation | Cleanup |
+
+Scripts must be **executable** (`chmod +x`) and committed with the executable bit set. Use `eas secret:create` to expose secrets to hooks as env vars.
+
+Docs: [Run custom scripts with npm hooks](https://docs.expo.dev/build-reference/npm-hooks/)
 
 ## Development
 
