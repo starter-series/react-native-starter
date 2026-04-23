@@ -24,19 +24,21 @@ Build your app. Push to deploy.
 
 ## Quick Start
 
+**Via [create-starter](https://github.com/starter-series/create-starter)** (recommended):
+
 ```bash
-# 1. Click "Use this template" on GitHub (or clone)
-git clone https://github.com/starter-series/react-native-starter.git my-app
-cd my-app
-
-# 2. Install dependencies
-npm install
-
-# 3. Start the dev server
-npx expo start
-
-# 4. Scan the QR code with Expo Go (or press 'a' for Android / 'i' for iOS)
+npx @starter-series/create my-app --template react-native
+cd my-app && npm install && npx expo start
 ```
+
+**Or clone directly:**
+
+```bash
+git clone https://github.com/starter-series/react-native-starter my-app
+cd my-app && npm install && npx expo start
+```
+
+Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
 
 ## What's Included
 

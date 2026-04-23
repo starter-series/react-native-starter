@@ -24,19 +24,21 @@
 
 ## 빠른 시작
 
+**[create-starter](https://github.com/starter-series/create-starter) 사용** (권장):
+
 ```bash
-# 1. GitHub에서 "Use this template" 클릭 (또는 clone)
-git clone https://github.com/starter-series/react-native-starter.git my-app
-cd my-app
-
-# 2. 의존성 설치
-npm install
-
-# 3. 개발 서버 시작
-npx expo start
-
-# 4. Expo Go로 QR 코드 스캔 (또는 'a'로 Android / 'i'로 iOS)
+npx @starter-series/create my-app --template react-native
+cd my-app && npm install && npx expo start
 ```
+
+**또는 직접 clone:**
+
+```bash
+git clone https://github.com/starter-series/react-native-starter my-app
+cd my-app && npm install && npx expo start
+```
+
+그런 다음 Expo Go로 QR 코드를 스캔하세요 (또는 `a`로 Android / `i`로 iOS).
 
 ## 포함된 구성
 
