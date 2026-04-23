@@ -57,7 +57,8 @@ npx expo start
 ├── docs/
 │   ├── EXPO_SETUP.md           # Expo 계정 + EAS 설정
 │   ├── APP_STORE_SETUP.md      # Apple Developer + App Store Connect
-│   └── PLAY_STORE_SETUP.md     # Google Play Console 설정
+│   ├── PLAY_STORE_SETUP.md     # Google Play Console 설정
+│   └── AUTH_EXAMPLE.md         # 선택: Google OAuth (Auth Session + SecureStore)
 ├── scripts/
 │   └── bump-version.js         # app.json + package.json 버전 업
 ├── eas-hooks/
@@ -186,6 +187,10 @@ npm test
 | 첫 배포까지 | 수 분 (스토어 계정 설정 후) | 설정에 수 시간 |
 
 **핵심:** EAS가 클라우드에서 네이티브 빌드를 처리합니다 -- CI/CD에 로컬 Xcode나 Android Studio가 필요 없습니다. 이 템플릿은 그것을 GitHub Actions에 연결해서 첫날부터 원클릭 배포를 제공합니다.
+
+### 인증(Auth)은?
+
+인증은 **의도적으로** 넣지 않았습니다 — 대부분의 앱이 provider 하나면 충분한데, 여기 박아두면 필요 없는 사람에게도 런타임 의존성을 강제하게 됩니다. `expo-auth-session` + `expo-secure-store` 기반 Google OAuth 복붙 패턴은 **[docs/AUTH_EXAMPLE.md](docs/AUTH_EXAMPLE.md)** 참고.
 
 ### TypeScript는?
 
