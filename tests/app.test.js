@@ -45,6 +45,31 @@ describe('Project structure', () => {
     expect(appJson.expo.plugins).toContain('expo-secure-store');
     expect(appJson.expo.scheme).toBeTruthy();
   });
+
+  test('app.json declares iOS privacy manifest (App Store gate)', () => {
+    const appJson = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
+    const pm = appJson.expo.ios.privacyManifests;
+    expect(pm).toBeDefined();
+    expect(Array.isArray(pm.NSPrivacyAccessedAPITypes)).toBe(true);
+    expect(pm.NSPrivacyAccessedAPITypes.length).toBeGreaterThan(0);
+    // Tracking should default to false; flipping it requires populating
+    // NSPrivacyTrackingDomains and a deliberate compliance review.
+    expect(pm.NSPrivacyTracking).toBe(false);
+    // Each declared API must carry at least one approved reason code.
+    for (const api of pm.NSPrivacyAccessedAPITypes) {
+      expect(typeof api.NSPrivacyAccessedAPIType).toBe('string');
+      expect(Array.isArray(api.NSPrivacyAccessedAPITypeReasons)).toBe(true);
+      expect(api.NSPrivacyAccessedAPITypeReasons.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('app.json declares Android 14 partial photo permission', () => {
+    const appJson = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
+    const perms = appJson.expo.android.permissions || [];
+    // READ_MEDIA_VISUAL_USER_SELECTED is the fallback granted when a user
+    // picks "Selected photos" on Android 14+. Always include it.
+    expect(perms).toContain('READ_MEDIA_VISUAL_USER_SELECTED');
+  });
 });
 
 describe('Version bumper', () => {
