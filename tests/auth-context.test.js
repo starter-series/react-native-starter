@@ -36,10 +36,13 @@ process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 'test-web-client-id';
 // --- Fixture: a Google id_token (not signature-verified, only decoded) ---
 // header.payload.signature where payload is base64url(JSON)
 const claims = {
+  iss: 'https://accounts.google.com',
   sub: 'goog-123',
   email: 'ada@example.com',
   name: 'Ada Lovelace',
   picture: 'https://example.com/ada.png',
+  // Far-future exp so isSessionStillValid() accepts it across CI runs.
+  exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365 * 10,
 };
 const payloadB64 = Buffer.from(JSON.stringify(claims))
   .toString('base64')
@@ -168,7 +171,7 @@ describe('AuthProvider lifecycle', () => {
       STORAGE_KEY,
       JSON.stringify({
         user: { email: 'restored@example.com', name: 'Restored', picture: null, sub: 'x' },
-        tokens: { idToken: 't', accessToken: 'a' },
+        tokens: { idToken: fakeIdToken, accessToken: 'a' },
       }),
     );
     let captured;
@@ -186,7 +189,7 @@ describe('AuthProvider lifecycle', () => {
       STORAGE_KEY,
       JSON.stringify({
         user: { email: 'x@y.z', name: 'X', picture: null, sub: 's' },
-        tokens: { idToken: 't', accessToken: 'a' },
+        tokens: { idToken: fakeIdToken, accessToken: 'a' },
       }),
     );
     let captured;
