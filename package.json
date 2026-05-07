@@ -47,6 +47,11 @@
         "functions": 70,
         "lines": 80
       }
-    }
+    },
+    "coverageReporters": [
+      "text",
+      "text-summary",
+      "json-summary"
+    ]
   }
 }
