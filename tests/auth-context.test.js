@@ -58,8 +58,20 @@ const {
   useAuth,
   handleAuthResult,
   decodeIdToken,
+  isSessionStillValid,
   STORAGE_KEY,
 } = require('../lib/auth-context');
+
+// Build a JWT with arbitrary claims for the negative-path probes below.
+// Signature is never verified by this client — only the payload is decoded.
+function makeFakeJwt(claimsOverride) {
+  const payload = Buffer.from(JSON.stringify(claimsOverride))
+    .toString('base64')
+    .replace(/=+$/, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+  return `eyJhbGciOiJSUzI1NiJ9.${payload}.sig`;
+}
 
 function Probe({ onUser }) {
   const ctx = useAuth();
@@ -88,6 +100,58 @@ describe('decodeIdToken', () => {
     expect(decodeIdToken('not-a-jwt')).toBeNull();
     expect(decodeIdToken(null)).toBeNull();
     expect(decodeIdToken('aaa.!!!.ccc')).toBeNull();
+  });
+});
+
+describe('isSessionStillValid — issuer + expiry boundary', () => {
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const past = Math.floor(Date.now() / 1000) - 3600;
+
+  test('accepts a fresh Google-issued token', () => {
+    const tok = makeFakeJwt({
+      iss: 'https://accounts.google.com',
+      sub: 'goog-1',
+      exp: future,
+    });
+    expect(isSessionStillValid({ tokens: { idToken: tok } })).toBe(true);
+  });
+
+  test('rejects a token whose iss is missing — regression for the second-pass audit', () => {
+    // Without this check, an attacker who can write to SecureStore (e.g. on a
+    // rooted/jailbroken device or via a shared-keychain entitlement bug) could
+    // craft an iss-less blob and ride the session indefinitely. See
+    // lib/auth-context.js — `iss` is REQUIRED, not optional.
+    const tok = makeFakeJwt({ sub: 'x', exp: future });
+    expect(isSessionStillValid({ tokens: { idToken: tok } })).toBe(false);
+  });
+
+  test('rejects a token issued by a non-Google IdP', () => {
+    const tok = makeFakeJwt({
+      iss: 'https://evil.example.com',
+      sub: 'x',
+      exp: future,
+    });
+    expect(isSessionStillValid({ tokens: { idToken: tok } })).toBe(false);
+  });
+
+  test('rejects an expired token even with a valid iss', () => {
+    const tok = makeFakeJwt({
+      iss: 'https://accounts.google.com',
+      sub: 'x',
+      exp: past,
+    });
+    expect(isSessionStillValid({ tokens: { idToken: tok } })).toBe(false);
+  });
+
+  test('rejects when exp is missing entirely', () => {
+    const tok = makeFakeJwt({ iss: 'https://accounts.google.com', sub: 'x' });
+    expect(isSessionStillValid({ tokens: { idToken: tok } })).toBe(false);
+  });
+
+  test('rejects when no idToken is present', () => {
+    expect(isSessionStillValid({ tokens: {} })).toBe(false);
+    expect(isSessionStillValid({})).toBe(false);
+    expect(isSessionStillValid(null)).toBe(false);
   });
 });
 
