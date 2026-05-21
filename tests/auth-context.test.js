@@ -30,8 +30,20 @@ jest.mock('expo-auth-session/providers/google', () => ({
   useAuthRequest: () => [{ state: 'ready' }, null, jest.fn(async () => ({ type: 'cancel' }))],
 }));
 
-// Env: pretend the web client ID is set.
-process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 'test-web-client-id';
+// Stub lib/env so assertGoogleEnv is a no-op for the happy-path suite. The
+// error path (assertGoogleEnv throws) lives in tests/signin-error.test.js
+// where the same module is mocked the other way. The previous
+// `process.env.EXPO_PUBLIC_... = ...` approach worked while no test invoked
+// signIn(), but env.js reads process.env at module-load time — the load
+// order vs. the assignment is fragile under jest-expo's preset hoisting.
+jest.mock('../lib/env', () => ({
+  googleClientIds: {
+    webClientId: 'test-web-client-id',
+    iosClientId: undefined,
+    androidClientId: undefined,
+  },
+  assertGoogleEnv: jest.fn(),
+}));
 
 // --- Fixture: a Google id_token (not signature-verified, only decoded) ---
 // header.payload.signature where payload is base64url(JSON)
@@ -197,6 +209,34 @@ describe('handleAuthResult (pure)', () => {
     expect(setSession).not.toHaveBeenCalled();
   });
 
+  test('success without id_token throws and does NOT persist — regression', async () => {
+    // Before the second-pass audit (2026-05-21), this path silently wrote
+    // `{user:null,tokens:{idToken:null,accessToken:null}}` to SecureStore.
+    // Self-healing on next mount, but a real state-corruption bug.
+    const setSession = jest.fn();
+    const store = {
+      setItemAsync: jest.fn(),
+      getItemAsync: jest.fn(),
+      deleteItemAsync: jest.fn(),
+    };
+    await expect(
+      handleAuthResult(
+        { type: 'success', params: {}, authentication: {} },
+        setSession,
+        { store },
+      ),
+    ).rejects.toThrow(/missing id_token/);
+    expect(store.setItemAsync).not.toHaveBeenCalled();
+    expect(setSession).not.toHaveBeenCalled();
+  });
+
+  test('unknown response type (e.g. dismiss) is a no-op', async () => {
+    const setSession = jest.fn();
+    await handleAuthResult({ type: 'dismiss' }, setSession);
+    expect(setSession).not.toHaveBeenCalled();
+    expect(mockSecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+
   // Mutation-check: if handleAuthResult accidentally skipped persisting the
   // session, the assertion below would still pass for user population but this
   // extra check fails. Guards against a common regression.
@@ -246,6 +286,23 @@ describe('AuthProvider lifecycle', () => {
     );
     await waitFor(() => expect(captured.loading).toBe(false));
     expect(captured.user?.email).toBe('restored@example.com');
+  });
+
+  test('signIn (happy path) calls promptAsync without throwing', async () => {
+    // Covers lines 165-173 + 178 of lib/auth-context.js (signIn body, no-throw
+    // branch). The error path is covered in tests/signin-error.test.js with
+    // isolated mocking — see that file for the assertGoogleEnv-throws scenario.
+    let captured;
+    render(
+      <AuthProvider>
+        <Probe onUser={(c) => (captured = c)} />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(captured.loading).toBe(false));
+    await act(async () => {
+      await captured.signIn();
+    });
+    expect(captured.error).toBeNull();
   });
 
   test('signOut clears user + SecureStore', async () => {
