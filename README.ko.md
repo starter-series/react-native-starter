@@ -69,7 +69,8 @@ cd my-app && npm install && npx expo start
 ├── docs/
 │   ├── EXPO_SETUP.md           # Expo 계정 + EAS 설정
 │   ├── APP_STORE_SETUP.md      # Apple Developer + App Store Connect
-│   └── PLAY_STORE_SETUP.md     # Google Play Console 설정
+│   ├── PLAY_STORE_SETUP.md     # Google Play Console 설정
+│   └── PRIVACY_MANIFEST.md     # iOS PrivacyInfo.xcprivacy + Android 포토 피커 권한
 ├── scripts/
 │   └── bump-version.js         # app.json + package.json 버전 업
 ├── eas-hooks/
@@ -108,6 +109,7 @@ cd my-app && npm install && npx expo start
 | CodeQL (`codeql.yml`) | 보안 취약점 정적 분석 (push/PR + 주간) |
 | Maintenance (`maintenance.yml`) | 주간 CI 헬스 체크 — 실패 시 이슈 자동 생성 |
 | Stale (`stale.yml`) | 비활성 이슈/PR 30일 후 라벨링, 7일 후 자동 종료 |
+| CHANGELOG (`update-changelog.yml`) | 머지된 PR 항목을 `CHANGELOG.md`에 자동으로 추가 |
 
 ### CD Android (Actions 탭에서 수동 실행)
 
@@ -230,6 +232,20 @@ Google 로그인이 `expo-auth-session` + `expo-secure-store` 조합으로 **이
 3. `.js` 파일을 `.tsx`로 변경
 
 Expo는 TypeScript를 기본 지원합니다 -- 추가 설정 불필요.
+
+## 설계 의도 (Design Intent)
+
+- **클라우드 빌드 우선.** EAS가 기기 외부에서 네이티브 바이너리를 컴파일하므로, 로컬 Xcode/Android Studio 없이도 CI/CD가 동작합니다.
+- **라우트 그룹 기반 인증.** `app/(app)/`이 보호 영역입니다 — 화면마다 "인증 확인" 코드를 흩뿌리지 않습니다.
+- **OS 키체인에 시크릿 저장.** 토큰은 `expo-secure-store`를 통해 iOS Keychain / Android Keystore로 들어가며, `AsyncStorage`에는 절대 저장되지 않습니다.
+- **모든 push에서 lint·test·audit.** 공급망 하드닝(`--ignore-scripts`, pinned gitleaks, CodeQL)이 기본 활성화 — 사후 작업이 아닙니다.
+
+## 비목표 (Non-Goals)
+
+- **TypeScript 기본.** 템플릿을 가볍게 유지하기 위해 JS로 시작합니다. 위 안내에 따라 선택적으로 전환할 수 있습니다.
+- **커스텀 네이티브 모듈.** `expo prebuild` + 네이티브 코드가 필요한 경우는 범위 밖입니다. bare workflow를 사용하세요.
+- **백엔드.** 클라이언트만 포함됩니다. 별도 API 레포와 조합하세요.
+- **상태 관리 라이브러리.** Redux/Zustand 등을 포함하지 않습니다 — 인증 컨텍스트가 유일한 전역 상태입니다.
 
 ## 기여
 
