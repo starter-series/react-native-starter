@@ -69,7 +69,8 @@ Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
 ├── docs/
 │   ├── EXPO_SETUP.md           # Expo account + EAS setup
 │   ├── APP_STORE_SETUP.md      # Apple Developer + App Store Connect
-│   └── PLAY_STORE_SETUP.md     # Google Play Console setup
+│   ├── PLAY_STORE_SETUP.md     # Google Play Console setup
+│   └── PRIVACY_MANIFEST.md     # iOS PrivacyInfo.xcprivacy + Android photo picker permission
 ├── scripts/
 │   └── bump-version.js         # Bumps version in app.json + package.json
 ├── eas-hooks/
@@ -108,6 +109,7 @@ Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
 | CodeQL (`codeql.yml`) | Static analysis for security vulnerabilities (push/PR + weekly) |
 | Maintenance (`maintenance.yml`) | Weekly CI health check — auto-creates issue on failure |
 | Stale (`stale.yml`) | Labels inactive issues/PRs after 30 days, auto-closes after 7 more |
+| CHANGELOG (`update-changelog.yml`) | Appends merged-PR entries to `CHANGELOG.md` automatically |
 
 ### CD Android (manual trigger via Actions tab)
 
@@ -230,6 +232,20 @@ This template uses JavaScript to stay lightweight. To add TypeScript:
 3. Rename `.js` files to `.tsx`
 
 Expo supports TypeScript out of the box -- no extra configuration needed.
+
+## Design Intent
+
+- **Cloud-native builds.** EAS compiles native binaries off-device so CI/CD runs without local Xcode or Android Studio.
+- **Auth gating via route groups.** `app/(app)/` is the protected zone — there is no "auth check" scattered across screens.
+- **Secrets in the OS keychain.** Tokens go to iOS Keychain / Android Keystore through `expo-secure-store`, never `AsyncStorage`.
+- **Lint, test, audit on every push.** Supply-chain hardening (`--ignore-scripts`, pinned gitleaks, CodeQL) is on by default — not an afterthought.
+
+## Non-Goals
+
+- **TypeScript by default.** Stays JS to keep the template small; opt-in steps are documented above.
+- **Custom native modules.** Anything requiring `expo prebuild` + native code is out of scope. Use a bare workflow if you need it.
+- **Backend.** This is the client only. Pair with a separate API repo.
+- **State management library.** No Redux/Zustand/etc. — the auth context is the only global state shipped.
 
 ## Contributing
 
