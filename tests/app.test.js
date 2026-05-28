@@ -77,11 +77,28 @@ describe('Version bumper', () => {
   const { execFileSync } = require('child_process');
   const os = require('os');
 
+  // Track sandbox dirs so afterEach can purge them. Without this, each
+  // `npm test` leaks one tmpdir per bumper test — fine on ephemeral CI
+  // runners, slow leak on long-lived self-hosted infra. Flagged by the
+  // 2026-05-21 post-fix review.
+  const sandboxes = [];
+  afterEach(() => {
+    while (sandboxes.length > 0) {
+      const d = sandboxes.pop();
+      try {
+        fs.rmSync(d, { recursive: true, force: true });
+      } catch {
+        // best-effort cleanup; don't fail the suite on a stuck handle
+      }
+    }
+  });
+
   // Run the bumper against a throwaway sandbox so we don't mutate the real
   // app.json. The script reads/writes from process.cwd(), so we cd into a
   // tmpdir seeded with a minimal app.json (and optionally a package.json).
   function runBumper({ type, appVersion, withPackageJson = false }) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bump-test-'));
+    sandboxes.push(dir);
     fs.writeFileSync(
       path.join(dir, 'app.json'),
       JSON.stringify({ expo: { version: appVersion } }) + '\n',

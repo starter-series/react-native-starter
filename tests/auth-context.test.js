@@ -26,8 +26,15 @@ jest.mock('expo-web-browser', () => ({
 }));
 
 // Prevent `useAuthRequest` from reaching the network / native discovery.
+// Expose promptAsync + response settors so tests can drive the auth pipeline
+// end-to-end (response → useEffect → handleAuthResult → setSession/setError),
+// not just verify the pure handler. The previous mock created a fresh jest.fn
+// on every render, which made it impossible to assert `promptAsync` was
+// actually invoked from signIn — flagged by the 2026-05-21 post-fix review.
+const mockPromptAsync = jest.fn(async () => ({ type: 'cancel' }));
+let mockUseAuthRequestResponse = null;
 jest.mock('expo-auth-session/providers/google', () => ({
-  useAuthRequest: () => [{ state: 'ready' }, null, jest.fn(async () => ({ type: 'cancel' }))],
+  useAuthRequest: () => [{ state: 'ready' }, mockUseAuthRequestResponse, mockPromptAsync],
 }));
 
 // Stub lib/env so assertGoogleEnv is a no-op for the happy-path suite. The
@@ -36,13 +43,14 @@ jest.mock('expo-auth-session/providers/google', () => ({
 // `process.env.EXPO_PUBLIC_... = ...` approach worked while no test invoked
 // signIn(), but env.js reads process.env at module-load time — the load
 // order vs. the assignment is fragile under jest-expo's preset hoisting.
+const mockAssertGoogleEnv = jest.fn();
 jest.mock('../lib/env', () => ({
   googleClientIds: {
     webClientId: 'test-web-client-id',
     iosClientId: undefined,
     androidClientId: undefined,
   },
-  assertGoogleEnv: jest.fn(),
+  assertGoogleEnv: mockAssertGoogleEnv,
 }));
 
 // --- Fixture: a Google id_token (not signature-verified, only decoded) ---
@@ -96,6 +104,9 @@ beforeEach(() => {
   mockSecureStore.getItemAsync.mockClear();
   mockSecureStore.setItemAsync.mockClear();
   mockSecureStore.deleteItemAsync.mockClear();
+  mockPromptAsync.mockClear();
+  mockAssertGoogleEnv.mockClear();
+  mockUseAuthRequestResponse = null;
 });
 
 // -----------------------------------------------------------------------
@@ -230,11 +241,59 @@ describe('handleAuthResult (pure)', () => {
     expect(setSession).not.toHaveBeenCalled();
   });
 
-  test('unknown response type (e.g. dismiss) is a no-op', async () => {
+  test('success with non-Google iss throws and does NOT persist — regression for acquisition-side asymmetry', async () => {
+    // 2026-05-21 post-fix review: isSessionStillValid now strictly rejects
+    // missing/non-Google iss on rehydration, but the acquisition path used
+    // to persist the same token, flip UI to signed-in, and only reject on
+    // the next cold start. Acquisition must also enforce.
     const setSession = jest.fn();
-    await handleAuthResult({ type: 'dismiss' }, setSession);
+    const store = { setItemAsync: jest.fn(), getItemAsync: jest.fn(), deleteItemAsync: jest.fn() };
+    const evilToken = makeFakeJwt({
+      iss: 'https://evil.example.com',
+      sub: 'x',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    await expect(
+      handleAuthResult(
+        { type: 'success', params: { id_token: evilToken } },
+        setSession,
+        { store },
+      ),
+    ).rejects.toThrow(/not Google-issued/);
+    expect(store.setItemAsync).not.toHaveBeenCalled();
     expect(setSession).not.toHaveBeenCalled();
-    expect(mockSecureStore.setItemAsync).not.toHaveBeenCalled();
+  });
+
+  test('success with iss-less id_token throws and does NOT persist', async () => {
+    const setSession = jest.fn();
+    const store = { setItemAsync: jest.fn(), getItemAsync: jest.fn(), deleteItemAsync: jest.fn() };
+    const issLessToken = makeFakeJwt({
+      sub: 'x',
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    });
+    await expect(
+      handleAuthResult(
+        { type: 'success', params: { id_token: issLessToken } },
+        setSession,
+        { store },
+      ),
+    ).rejects.toThrow(/not Google-issued/);
+    expect(store.setItemAsync).not.toHaveBeenCalled();
+    expect(setSession).not.toHaveBeenCalled();
+  });
+
+  // `dismiss` shares the unknown-type fall-through with everything other
+  // than success/error/cancel. We don't have a behavioural change to assert
+  // here — only an explicit pin so a future "throw on unknown type" refactor
+  // is a CONSCIOUS choice rather than a silent regression.
+  test('explicitly: dismiss and other unknown types fall through (no setSession, no persist)', async () => {
+    const setSession = jest.fn();
+    const store = { setItemAsync: jest.fn(), getItemAsync: jest.fn(), deleteItemAsync: jest.fn() };
+    for (const t of ['dismiss', 'opener', 'locked']) {
+      await handleAuthResult({ type: t }, setSession, { store });
+    }
+    expect(setSession).not.toHaveBeenCalled();
+    expect(store.setItemAsync).not.toHaveBeenCalled();
   });
 
   // Mutation-check: if handleAuthResult accidentally skipped persisting the
@@ -288,10 +347,35 @@ describe('AuthProvider lifecycle', () => {
     expect(captured.user?.email).toBe('restored@example.com');
   });
 
-  test('signIn (happy path) calls promptAsync without throwing', async () => {
-    // Covers lines 165-173 + 178 of lib/auth-context.js (signIn body, no-throw
-    // branch). The error path is covered in tests/signin-error.test.js with
-    // isolated mocking — see that file for the assertGoogleEnv-throws scenario.
+  test('handleAuthResult throw via useEffect surfaces to context.error (integration)', async () => {
+    // The 2026-05-21 post-fix review flagged that the new throw in
+    // handleAuthResult was only tested by direct invocation — never via
+    // the useEffect → .catch(setError) integration the security claim
+    // depends on. This test feeds a malformed success response through
+    // the mocked useAuthRequest channel and asserts the user-visible
+    // error state.
+    mockUseAuthRequestResponse = {
+      type: 'success',
+      params: {}, // intentionally no id_token
+      authentication: {},
+    };
+    let captured;
+    render(
+      <AuthProvider>
+        <Probe onUser={(c) => (captured = c)} />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(captured.error).toBeInstanceOf(Error));
+    expect(captured.error.message).toMatch(/missing id_token/);
+    expect(captured.user).toBeNull();
+  });
+
+  test('signIn (happy path) actually invokes assertGoogleEnv and promptAsync', async () => {
+    // The prior version only checked `captured.error === null`, which is
+    // the initial state AND the value set by signIn's first line — so the
+    // assertion passed even if signIn was a no-op. Flagged by the
+    // 2026-05-21 post-fix review as a tautological coverage gap. Now we
+    // probe both dependencies (env check + auth prompt) directly.
     let captured;
     render(
       <AuthProvider>
@@ -302,6 +386,8 @@ describe('AuthProvider lifecycle', () => {
     await act(async () => {
       await captured.signIn();
     });
+    expect(mockAssertGoogleEnv).toHaveBeenCalledTimes(1);
+    expect(mockPromptAsync).toHaveBeenCalledTimes(1);
     expect(captured.error).toBeNull();
   });
 

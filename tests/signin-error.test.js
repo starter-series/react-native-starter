@@ -20,8 +20,17 @@ const mockSecureStore = {
 
 jest.mock('expo-secure-store', () => mockSecureStore);
 jest.mock('expo-web-browser', () => ({ maybeCompleteAuthSession: jest.fn() }));
+// promptAsync must return a Promise — the real expo-auth-session surface
+// is Promise<AuthSessionResult>. Returning bare undefined (the default
+// jest.fn() shape) was flagged by the 2026-05-21 post-fix review as a
+// faithful-mock gap that would silently let future tests pass against a
+// non-Promise stand-in.
 jest.mock('expo-auth-session/providers/google', () => ({
-  useAuthRequest: () => [{ state: 'ready' }, null, jest.fn()],
+  useAuthRequest: () => [
+    { state: 'ready' },
+    null,
+    jest.fn(async () => ({ type: 'cancel' })),
+  ],
 }));
 
 // Replace lib/env with a stub whose assertGoogleEnv always throws — this

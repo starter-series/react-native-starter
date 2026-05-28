@@ -1,13 +1,15 @@
 // Exercise the route-group gating that README "Currently implemented" lists
 // as the auth boundary. Before the 2026-05-21 second-pass audit, no test
 // rendered (app)/_layout.js — the gating was claimed, not verified.
+//
+// Assertions use `expect.objectContaining` rather than strict deep equality
+// on props, so adding e.g. `<Redirect href="/login" replace />` or a
+// React 19 JSX-runtime metadata key won't false-alarm the gate test.
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Text } from 'react-native';
 
-// Capture what `<Redirect>` was rendered with so we can assert the gate.
-const mockRedirect = jest.fn(({ href }) => null);
+const mockRedirect = jest.fn(() => null);
 const mockStack = jest.fn(() => null);
 
 jest.mock('expo-router', () => ({
@@ -33,7 +35,6 @@ describe('(app)/_layout — protected route group', () => {
     const { UNSAFE_root } = render(<AppLayout />);
     expect(mockRedirect).not.toHaveBeenCalled();
     expect(mockStack).not.toHaveBeenCalled();
-    // The spinner View is rendered — assert by tree shape rather than text.
     expect(UNSAFE_root).toBeTruthy();
   });
 
@@ -41,7 +42,9 @@ describe('(app)/_layout — protected route group', () => {
     mockAuthState = { user: null, loading: false };
     const AppLayout = require('../app/(app)/_layout').default;
     render(<AppLayout />);
-    expect(mockRedirect).toHaveBeenCalledWith({ href: '/login' });
+    expect(mockRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/login' }),
+    );
     expect(mockStack).not.toHaveBeenCalled();
   });
 
@@ -60,21 +63,26 @@ describe('(auth)/_layout — bounce when already signed in', () => {
     mockStack.mockClear();
   });
 
-  test('while loading, neither Redirect nor a bounce fires', () => {
+  test('while loading, neither Redirect nor Stack fires (own spinner)', () => {
+    // Regression for the 2026-05-21 review: previously this layout rendered
+    // <Stack> during loading, flashing the login UI before the redirect
+    // when restoring a signed-in session into a /login deep link. Now it
+    // owns its own spinner — the (app)/_layout's spinner doesn't cover
+    // this case because the route IS underneath (auth), not (app).
     mockAuthState = { user: null, loading: true };
     const AuthLayout = require('../app/(auth)/_layout').default;
     render(<AuthLayout />);
     expect(mockRedirect).not.toHaveBeenCalled();
-    // Stack still rendered while loading — that's intentional, the parent
-    // (app)/_layout owns the spinner.
-    expect(mockStack).toHaveBeenCalled();
+    expect(mockStack).not.toHaveBeenCalled();
   });
 
   test('when signed in, bounces back to /', () => {
     mockAuthState = { user: { email: 'a@b.c' }, loading: false };
     const AuthLayout = require('../app/(auth)/_layout').default;
     render(<AuthLayout />);
-    expect(mockRedirect).toHaveBeenCalledWith({ href: '/' });
+    expect(mockRedirect).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/' }),
+    );
   });
 
   test('when not signed in, renders the Stack so the login screen appears', () => {
