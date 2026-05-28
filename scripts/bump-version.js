@@ -8,7 +8,21 @@ if (!valid.includes(type)) {
 }
 
 const appConfig = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-const v = appConfig.expo.version.split('.').map(Number);
+const current = appConfig.expo.version;
+
+// Only accept strict MAJOR.MINOR.PATCH numerics. Prerelease/build-metadata
+// (`1.2.3-beta.1`, `1.2.3+sha`) would parse to NaN under the naive split-Map,
+// producing a corrupted `1.2.NaN` write — fail loudly instead.
+if (!/^\d+\.\d+\.\d+$/.test(current)) {
+  console.error(
+    `Refusing to bump: app.json expo.version="${current}" is not strict ` +
+      `MAJOR.MINOR.PATCH. Prerelease/build-metadata is not supported here — ` +
+      `bump manually and commit, or strip suffixes first.`,
+  );
+  process.exit(1);
+}
+
+const v = current.split('.').map(Number);
 
 if (type === 'major') { v[0]++; v[1] = 0; v[2] = 0; }
 else if (type === 'minor') { v[1]++; v[2] = 0; }

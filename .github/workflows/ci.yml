@@ -52,9 +52,27 @@ jobs:
         run: npx license-checker --failOn "GPL-2.0;GPL-3.0;AGPL-3.0"
 
       - name: Security audit
-        # Expo's transitive deps (tar, jsdom) frequently trigger high-severity
-        # advisories that can't be fixed without breaking Expo upgrades.
-        run: npm audit --audit-level=critical
+        # Threshold raised from `critical` to `high` in the 2026-05-21
+        # second-pass audit. The previous `critical`-only gate masked
+        # 20+ high-severity production advisories (undici, tar, node-forge,
+        # @xmldom/xmldom, postcss, picomatch, brace-expansion, fast-uri).
+        # The fix path for all of them is the Expo SDK 52 to 55 upgrade
+        # tracked in the modernization audit — failing CI here is the
+        # forcing function for that upgrade.
+        #
+        # CD / maintenance impact (called out by the post-fix code review):
+        # cd-android.yml, cd-ios.yml, and maintenance.yml all reuse this
+        # workflow via `uses` plus `needs: ci`. While the SDK upgrade is
+        # outstanding, any workflow_dispatch of the CD pipelines and every
+        # Monday scheduled maintenance run will also fail at this step.
+        # That is intentional — releasing on top of a known-vulnerable
+        # transitive tree is exactly what this gate is meant to prevent —
+        # but contributors should know not to treat the red badge as new
+        # breakage.
+        #
+        # If a single transitive advisory genuinely can't be patched,
+        # document the exception inline rather than weakening this gate.
+        run: npm audit --audit-level=high
 
       - name: Lint
         run: npm run lint
@@ -62,5 +80,7 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Build verification
-        run: npx expo export --platform web 2>/dev/null || echo "Web export not configured — skipping"
+      # Web export is a non-goal for the starter (README "Non-Goals"). The
+      # previous `2>/dev/null || echo "skipping"` swallowed real build
+      # failures, so the step was producing a false-green signal. Removed
+      # entirely — `npm test` is the build verification for this project.

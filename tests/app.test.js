@@ -74,8 +74,98 @@ describe('Project structure', () => {
 
 describe('Version bumper', () => {
   const bumperPath = path.resolve(__dirname, '..', 'scripts', 'bump-version.js');
+  const { execFileSync } = require('child_process');
+  const os = require('os');
 
-  test('bump script exists', () => {
-    expect(fs.existsSync(bumperPath)).toBe(true);
+  // Track sandbox dirs so afterEach can purge them. Without this, each
+  // `npm test` leaks one tmpdir per bumper test — fine on ephemeral CI
+  // runners, slow leak on long-lived self-hosted infra. Flagged by the
+  // 2026-05-21 post-fix review.
+  const sandboxes = [];
+  afterEach(() => {
+    while (sandboxes.length > 0) {
+      const d = sandboxes.pop();
+      try {
+        fs.rmSync(d, { recursive: true, force: true });
+      } catch {
+        // best-effort cleanup; don't fail the suite on a stuck handle
+      }
+    }
+  });
+
+  // Run the bumper against a throwaway sandbox so we don't mutate the real
+  // app.json. The script reads/writes from process.cwd(), so we cd into a
+  // tmpdir seeded with a minimal app.json (and optionally a package.json).
+  function runBumper({ type, appVersion, withPackageJson = false }) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bump-test-'));
+    sandboxes.push(dir);
+    fs.writeFileSync(
+      path.join(dir, 'app.json'),
+      JSON.stringify({ expo: { version: appVersion } }) + '\n',
+    );
+    if (withPackageJson) {
+      fs.writeFileSync(
+        path.join(dir, 'package.json'),
+        JSON.stringify({ name: 'sandbox', version: appVersion }) + '\n',
+      );
+    }
+    let err = null;
+    let stdout = '';
+    try {
+      stdout = execFileSync(process.execPath, [bumperPath, type], {
+        cwd: dir,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch (e) {
+      err = e;
+    }
+    const finalApp = JSON.parse(fs.readFileSync(path.join(dir, 'app.json'), 'utf8'));
+    const finalPkg = withPackageJson
+      ? JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
+      : null;
+    return { stdout: stdout.trim(), err, app: finalApp, pkg: finalPkg };
+  }
+
+  test('patch bump increments only the patch component', () => {
+    const r = runBumper({ type: 'patch', appVersion: '1.2.3' });
+    expect(r.err).toBeNull();
+    expect(r.app.expo.version).toBe('1.2.4');
+    expect(r.stdout).toBe('1.2.4');
+  });
+
+  test('minor bump zeroes the patch component', () => {
+    const r = runBumper({ type: 'minor', appVersion: '1.2.3' });
+    expect(r.app.expo.version).toBe('1.3.0');
+  });
+
+  test('major bump zeroes minor and patch', () => {
+    const r = runBumper({ type: 'major', appVersion: '1.2.3' });
+    expect(r.app.expo.version).toBe('2.0.0');
+  });
+
+  test('mirrors the new version into package.json when present', () => {
+    const r = runBumper({ type: 'patch', appVersion: '1.2.3', withPackageJson: true });
+    expect(r.pkg.version).toBe('1.2.4');
+  });
+
+  test('rejects prerelease versions instead of writing NaN — regression', () => {
+    // Before the second-pass audit (2026-05-21), `"1.2.3-beta.1".split('.')`
+    // -> `Number('3-beta')` = NaN, producing `1.2.NaN` in app.json.
+    const r = runBumper({ type: 'patch', appVersion: '1.2.3-beta.1' });
+    expect(r.err).not.toBeNull();
+    expect(r.app.expo.version).toBe('1.2.3-beta.1'); // unchanged
+  });
+
+  test('rejects 2-component versions instead of writing NaN — regression', () => {
+    const r = runBumper({ type: 'patch', appVersion: '1.2' });
+    expect(r.err).not.toBeNull();
+    expect(r.app.expo.version).toBe('1.2'); // unchanged
+  });
+
+  test('rejects invalid bump type', () => {
+    const r = runBumper({ type: 'wat', appVersion: '1.2.3' });
+    expect(r.err).not.toBeNull();
+    expect(r.app.expo.version).toBe('1.2.3'); // unchanged
   });
 });
