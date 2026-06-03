@@ -184,6 +184,22 @@ describe('AuthProvider lifecycle', () => {
     expect(captured.user?.email).toBe('restored@example.com');
   });
 
+  test('purges a corrupt SecureStore blob on mount (parse failure)', async () => {
+    // Not valid JSON -> JSON.parse throws inside the restore effect.
+    mockMemStore.set(STORAGE_KEY, '{not-json');
+    let captured;
+    render(
+      <AuthProvider>
+        <Probe onUser={(c) => (captured = c)} />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(captured.loading).toBe(false));
+    expect(captured.user).toBeNull();
+    // The bad blob must be deleted so the next cold start doesn't re-fail.
+    expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEY);
+    expect(mockMemStore.has(STORAGE_KEY)).toBe(false);
+  });
+
   test('signOut clears user + SecureStore', async () => {
     mockMemStore.set(
       STORAGE_KEY,
