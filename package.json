@@ -12,6 +12,7 @@
     "ios": "expo start --ios",
     "build": "expo export --platform web",
     "check:expo": "expo install --check",
+    "check:store-ready": "node scripts/check-store-readiness.js",
     "lint": "eslint app/ lib/",
     "test": "jest --verbose --passWithNoTests --coverage --runInBand",
     "version:patch": "node scripts/bump-version.js patch",
