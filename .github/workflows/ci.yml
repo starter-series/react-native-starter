@@ -52,9 +52,10 @@ jobs:
         run: npx license-checker --failOn "GPL-2.0;GPL-3.0;AGPL-3.0"
 
       - name: Security audit
-        # Expo's transitive deps (tar, jsdom) frequently trigger high-severity
-        # advisories that can't be fixed without breaking Expo upgrades.
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high
+
+      - name: Expo dependency check
+        run: npm run check:expo
 
       - name: Lint
         run: npm run lint
@@ -63,4 +64,4 @@ jobs:
         run: npm test
 
       - name: Build verification
-        run: npx expo export --platform web 2>/dev/null || echo "Web export not configured — skipping"
+        run: npm run build
