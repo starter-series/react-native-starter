@@ -28,14 +28,20 @@ Build your app. Push to deploy.
 
 ```bash
 npx @starter-series/create my-app --template react-native
-cd my-app && npm install && npx expo start
+cd my-app
+npm install
+npm run check:expo
+npm start
 ```
 
 **Or clone directly:**
 
 ```bash
 git clone https://github.com/starter-series/react-native-starter my-app
-cd my-app && npm install && npx expo start
+cd my-app
+npm install
+npm run check:expo
+npm start
 ```
 
 Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
@@ -98,9 +104,11 @@ Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
 
 | Step | What it does |
 |------|-------------|
-| Security audit | `npm audit` for dependency vulnerabilities |
+| Security audit | `npm audit --audit-level=high` for dependency vulnerabilities |
+| Expo check | `npm run check:expo` verifies Expo-compatible dependency versions |
 | Lint | ESLint on app and component code |
 | Test | Jest with React Native Testing Library |
+| Build verification | `npm run build` exports the web bundle |
 
 ### Security & Maintenance
 
@@ -135,7 +143,7 @@ Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
 
 1. Set up `EXPO_TOKEN` secret (see below)
 2. Configure store accounts (see [docs/](docs/))
-3. Run `eas submit:configure` once to populate the `submit` block in `eas.json` with your Apple/Google credentials
+3. Run `eas submit:configure` once to add the local `submit` block that matches your Apple/Google credentials
 4. Bump version: `npm run version:patch`
 5. Go to **Actions** tab -> **Deploy to Play Store** or **Deploy to App Store** -> **Run workflow**
 
@@ -171,11 +179,17 @@ Docs: [Run custom scripts with npm hooks](https://docs.expo.dev/build-reference/
 
 ```bash
 # Start dev server
-npx expo start
+npm start
 
 # Run on specific platform
 npm run android
 npm run ios
+
+# Verify Expo-compatible package versions
+npm run check:expo
+
+# Export the web bundle used by CI build verification
+npm run build
 
 # Bump version (updates app.json + package.json)
 npm run version:patch   # 1.0.0 -> 1.0.1
@@ -238,7 +252,7 @@ Expo supports TypeScript out of the box -- no extra configuration needed.
 - **Cloud-native builds.** EAS compiles native binaries off-device so CI/CD runs without local Xcode or Android Studio.
 - **Auth gating via route groups.** `app/(app)/` is the protected zone — there is no "auth check" scattered across screens.
 - **Secrets in the OS keychain.** Tokens go to iOS Keychain / Android Keystore through `expo-secure-store`, never `AsyncStorage`.
-- **Lint, test, audit on every push.** Supply-chain hardening (`--ignore-scripts`, pinned gitleaks, CodeQL) is on by default — not an afterthought.
+- **Lint, test, Expo check, build, audit on every push.** Supply-chain hardening (`--ignore-scripts`, high-severity audit gating, pinned gitleaks, CodeQL) is on by default — not an afterthought.
 
 ## Non-Goals
 

@@ -28,14 +28,20 @@
 
 ```bash
 npx @starter-series/create my-app --template react-native
-cd my-app && npm install && npx expo start
+cd my-app
+npm install
+npm run check:expo
+npm start
 ```
 
 **또는 직접 clone:**
 
 ```bash
 git clone https://github.com/starter-series/react-native-starter my-app
-cd my-app && npm install && npx expo start
+cd my-app
+npm install
+npm run check:expo
+npm start
 ```
 
 그런 다음 Expo Go로 QR 코드를 스캔하세요 (또는 `a`로 Android / `i`로 iOS).
@@ -98,9 +104,11 @@ cd my-app && npm install && npx expo start
 
 | 단계 | 역할 |
 |------|------|
-| 보안 감사 | `npm audit`로 의존성 취약점 확인 |
+| 보안 감사 | `npm audit --audit-level=high`로 의존성 취약점 확인 |
+| Expo 체크 | `npm run check:expo`로 Expo 호환 의존성 버전 확인 |
 | 린트 | ESLint로 앱 및 컴포넌트 코드 검사 |
 | 테스트 | Jest + React Native Testing Library |
+| 빌드 검증 | `npm run build`로 web bundle export |
 
 ### 보안 & 유지보수
 
@@ -135,7 +143,7 @@ cd my-app && npm install && npx expo start
 
 1. `EXPO_TOKEN` 시크릿 설정 (아래 참조)
 2. 스토어 계정 설정 ([docs/](docs/) 참조)
-3. `eas submit:configure`를 한 번 실행해 `eas.json`의 `submit` 블록에 Apple/Google 자격 증명 채우기
+3. `eas submit:configure`를 한 번 실행해 Apple/Google 자격 증명에 맞는 로컬 `submit` 블록 추가
 4. 버전 업: `npm run version:patch`
 5. **Actions** 탭 -> **Deploy to Play Store** 또는 **Deploy to App Store** -> **Run workflow**
 
@@ -171,11 +179,17 @@ EAS Build 생명주기 중간에 커스텀 스크립트를 실행합니다. `eas
 
 ```bash
 # 개발 서버 시작
-npx expo start
+npm start
 
 # 특정 플랫폼에서 실행
 npm run android
 npm run ios
+
+# Expo 호환 의존성 버전 확인
+npm run check:expo
+
+# CI 빌드 검증에서 사용하는 web bundle export
+npm run build
 
 # 버전 업 (app.json + package.json 자동 업데이트)
 npm run version:patch   # 1.0.0 -> 1.0.1
@@ -238,7 +252,7 @@ Expo는 TypeScript를 기본 지원합니다 -- 추가 설정 불필요.
 - **클라우드 빌드 우선.** EAS가 기기 외부에서 네이티브 바이너리를 컴파일하므로, 로컬 Xcode/Android Studio 없이도 CI/CD가 동작합니다.
 - **라우트 그룹 기반 인증.** `app/(app)/`이 보호 영역입니다 — 화면마다 "인증 확인" 코드를 흩뿌리지 않습니다.
 - **OS 키체인에 시크릿 저장.** 토큰은 `expo-secure-store`를 통해 iOS Keychain / Android Keystore로 들어가며, `AsyncStorage`에는 절대 저장되지 않습니다.
-- **모든 push에서 lint·test·audit.** 공급망 하드닝(`--ignore-scripts`, pinned gitleaks, CodeQL)이 기본 활성화 — 사후 작업이 아닙니다.
+- **모든 push에서 lint·test·Expo check·build·audit.** 공급망 하드닝(`--ignore-scripts`, high-severity audit gate, pinned gitleaks, CodeQL)이 기본 활성화 — 사후 작업이 아닙니다.
 
 ## 비목표 (Non-Goals)
 
