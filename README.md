@@ -124,6 +124,7 @@ Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
 | Step | What it does |
 |------|-------------|
 | CI | Runs full CI first |
+| Store readiness preflight | Fails if `app.json` still has placeholder app name, scheme, bundle ID, or package |
 | Version guard | Fails if git tag already exists for this version |
 | EAS Build | `eas build --platform android --profile production` |
 | EAS Submit | Uploads AAB to Play Store (internal track) |
@@ -134,6 +135,7 @@ Then scan the QR code with Expo Go (or press `a` for Android / `i` for iOS).
 | Step | What it does |
 |------|-------------|
 | CI | Runs full CI first |
+| Store readiness preflight | Fails if `app.json` still has placeholder app name, scheme, bundle ID, or package |
 | Version guard | Fails if git tag already exists for this version |
 | EAS Build | `eas build --platform ios --profile production` |
 | EAS Submit | Uploads to App Store Connect |
@@ -190,6 +192,9 @@ npm run check:expo
 
 # Export the web bundle used by CI build verification
 npm run build
+
+# Fail store deploy preflight if app.json still has starter identifiers
+npm run check:store-ready
 
 # Bump version (updates app.json + package.json)
 npm run version:patch   # 1.0.0 -> 1.0.1

@@ -124,6 +124,7 @@ npm start
 | 단계 | 역할 |
 |------|------|
 | CI | 전체 CI 먼저 실행 |
+| 스토어 준비 preflight | `app.json`에 기본 앱 이름, scheme, 번들 ID, 패키지가 남아 있으면 실패 |
 | 버전 가드 | 해당 버전의 git 태그가 이미 있으면 실패 |
 | EAS Build | `eas build --platform android --profile production` |
 | EAS Submit | AAB를 Play Store에 업로드 (internal 트랙) |
@@ -134,6 +135,7 @@ npm start
 | 단계 | 역할 |
 |------|------|
 | CI | 전체 CI 먼저 실행 |
+| 스토어 준비 preflight | `app.json`에 기본 앱 이름, scheme, 번들 ID, 패키지가 남아 있으면 실패 |
 | 버전 가드 | 해당 버전의 git 태그가 이미 있으면 실패 |
 | EAS Build | `eas build --platform ios --profile production` |
 | EAS Submit | App Store Connect에 업로드 |
@@ -190,6 +192,9 @@ npm run check:expo
 
 # CI 빌드 검증에서 사용하는 web bundle export
 npm run build
+
+# app.json에 starter 식별자가 남아 있으면 스토어 배포 preflight 실패
+npm run check:store-ready
 
 # 버전 업 (app.json + package.json 자동 업데이트)
 npm run version:patch   # 1.0.0 -> 1.0.1
