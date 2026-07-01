@@ -27,7 +27,7 @@ Build your app. Push to deploy.
 **Via [create-starter](https://github.com/starter-series/create-starter)** (recommended):
 
 ```bash
-npx @starter-series/create my-app --template react-native
+gh repo create my-app --template starter-series/react-native-starter --clone
 cd my-app
 npm install
 npm run check:expo
