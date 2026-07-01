@@ -73,7 +73,8 @@ const { assertGoogleEnv, readGoogleClientIds } = require('../lib/env');
 
 function Probe({ onUser }) {
   const ctx = useAuth();
-  onUser(ctx);
+  onUser?.(ctx);
+  if (ctx.loading) return <Text>loading</Text>;
   return <Text>{ctx.user ? `user:${ctx.user.email}` : 'anon'}</Text>;
 }
 
@@ -281,8 +282,9 @@ describe('AuthProvider lifecycle', () => {
           <Probe onUser={(c) => (captured = c)} />
         </AuthProvider>,
       );
-      await waitFor(() => expect(captured.loading).toBe(false), { timeout: 4000 });
-      expect(captured.user).toBeNull();
+      await waitFor(() => expect(captured?.loading).toBe(false), { timeout: 4000 });
+      expect(captured?.loading).toBe(false);
+      expect(captured?.user).toBeNull();
       expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(STORAGE_KEY);
     },
     10000,
