@@ -58,7 +58,7 @@ jobs:
           fi
 
       - name: Setup Expo CLI
-        uses: expo/expo-github-action@v8
+        uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
@@ -70,7 +70,7 @@ jobs:
         run: eas submit --platform ios --profile production --non-interactive
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
         with:
           tag_name: v${{ steps.version.outputs.version }}-ios
           name: v${{ steps.version.outputs.version }} (iOS)
