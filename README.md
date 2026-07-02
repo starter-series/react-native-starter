@@ -240,6 +240,8 @@ Google sign-in is **built in** with `expo-auth-session` + `expo-secure-store`. R
 
 Without client IDs, the login button surfaces a clear error message — it won't crash. Swap providers by replacing `expo-auth-session/providers/google` inside `lib/auth-context.js`.
 
+> **SecureStore 2048-byte limit (Android).** `expo-secure-store` warns (and may silently drop the write) when a single value exceeds 2048 bytes. To stay well under it, only the `id_token` and minimal user claims are persisted — the access token is kept in memory only — and the write is read back and verified so a dropped write surfaces as a sign-in error instead of a session that vanishes on the next cold start. If you persist extra fields, keep the serialized blob small.
+
 Docs: [Expo Google authentication guide](https://docs.expo.dev/guides/google-authentication/).
 
 ### What about TypeScript?
